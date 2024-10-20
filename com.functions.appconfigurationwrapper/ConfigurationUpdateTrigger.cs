@@ -22,25 +22,23 @@ namespace com.functions.appconfigurationwrapper
         }
 
         [Function(nameof(ConfigurationUpdateTrigger))]
-        public async Task<IActionResult> RunAsync([EventGridTrigger] EventGridEvent[] events)
+        public async Task<IActionResult> RunAsync([EventGridTrigger] EventGridEvent @event)
         {
-            foreach (EventGridEvent @event in events)
+            _logger.LogInformation("Event type: {type}, Event subject: {subject}", @event.EventType, @event.Subject);
+            if (@event.EventType == "Microsoft.EventGrid.SubscriptionValidationEvent")
             {
-                _logger.LogInformation("Event type: {type}, Event subject: {subject}", @event.EventType, @event.Subject);
-                if (@event.EventType == "Microsoft.EventGrid.SubscriptionValidationEvent")
+                return new OkObjectResult(new
                 {
-                    return new OkObjectResult(new
-                    {
-                        ValidationResponse = @event.Data.ToObjectFromJson<SubscriptionValidationEventData>().ValidationCode
-                    });
-                }
-                else if (@event.EventType == "Microsoft.AppConfiguration.KeyValueUpdated")
-                {
-                    var http = new HttpClient();
-                    var apiUrl = Environment.GetEnvironmentVariable("CentralizedWrapperAPIURL");
-                    var response = await http.GetAsync(apiUrl);
-                }
+                    ValidationResponse = @event.Data.ToObjectFromJson<SubscriptionValidationEventData>().ValidationCode
+                });
             }
+            else if (@event.EventType == "Microsoft.AppConfiguration.KeyValueUpdated")
+            {
+                var http = new HttpClient();
+                var apiUrl = Environment.GetEnvironmentVariable("CentralizedWrapperAPIURL");
+                var response = await http.GetAsync(apiUrl);
+            }
+
             return new OkObjectResult("");
         }
     }
