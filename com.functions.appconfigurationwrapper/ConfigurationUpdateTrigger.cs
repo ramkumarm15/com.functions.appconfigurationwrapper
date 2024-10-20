@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace com.functions.appconfigurationwrapper
 {
@@ -25,6 +26,7 @@ namespace com.functions.appconfigurationwrapper
         public async Task<IActionResult> RunAsync([EventGridTrigger] EventGridEvent @event)
         {
             _logger.LogInformation("Event type: {type}, Event subject: {subject}", @event.EventType, @event.Subject);
+            _logger.LogInformation(JsonConvert.SerializeObject(@event));
             try
             {
                 if (@event.EventType == "Microsoft.EventGrid.SubscriptionValidationEvent")
@@ -34,7 +36,7 @@ namespace com.functions.appconfigurationwrapper
                         ValidationResponse = @event.Data.ToObjectFromJson<SubscriptionValidationEventData>().ValidationCode
                     });
                 }
-                else if (@event.EventType == "Microsoft.AppConfiguration.KeyValueUpdated")
+                else if (@event.EventType == "Microsoft.AppConfiguration.KeyValueModified" || @event.EventType == "Microsoft.AppConfiguration.KeyValueDeleted")
                 {
                     var http = new HttpClient();
                     var apiUrl = Environment.GetEnvironmentVariable("CentralizedWrapperAPIURL");
