@@ -25,18 +25,27 @@ namespace com.functions.appconfigurationwrapper
         public async Task<IActionResult> RunAsync([EventGridTrigger] EventGridEvent @event)
         {
             _logger.LogInformation("Event type: {type}, Event subject: {subject}", @event.EventType, @event.Subject);
-            if (@event.EventType == "Microsoft.EventGrid.SubscriptionValidationEvent")
+            try
             {
-                return new OkObjectResult(new
+                if (@event.EventType == "Microsoft.EventGrid.SubscriptionValidationEvent")
                 {
-                    ValidationResponse = @event.Data.ToObjectFromJson<SubscriptionValidationEventData>().ValidationCode
-                });
+                    return new OkObjectResult(new
+                    {
+                        ValidationResponse = @event.Data.ToObjectFromJson<SubscriptionValidationEventData>().ValidationCode
+                    });
+                }
+                else if (@event.EventType == "Microsoft.AppConfiguration.KeyValueUpdated")
+                {
+                    var http = new HttpClient();
+                    var apiUrl = Environment.GetEnvironmentVariable("CentralizedWrapperAPIURL");
+                    _logger.LogInformation(apiUrl);
+                    var response = await http.GetAsync(apiUrl);
+                    _logger.LogInformation(response.StatusCode.ToString());
+                }
             }
-            else if (@event.EventType == "Microsoft.AppConfiguration.KeyValueUpdated")
+            catch (Exception ex)
             {
-                var http = new HttpClient();
-                var apiUrl = Environment.GetEnvironmentVariable("CentralizedWrapperAPIURL");
-                var response = await http.GetAsync(apiUrl);
+                _logger.LogInformation(ex.Message.ToString());
             }
 
             return new OkObjectResult("");
